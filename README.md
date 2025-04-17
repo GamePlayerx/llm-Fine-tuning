@@ -189,7 +189,7 @@ huggingface-cli download --resume-download deepseek-ai/DeepSeek-R1-Distill-Qwen-
 
 ![images/web3.png](images/web3.png)
 
-- 代码部分（注意：这段代码需要你开梯子，因为hugging-face是国外的网站，需要翻墙。）
+- 代码部分（注意：这段代码需要你开梯子，因为hugging-face是国外的网站，需要翻墙。）这里我做的数据集的格式是Alpaca格式
 
 ```python
 
@@ -258,6 +258,8 @@ print("JSON文件已成功创建。")
 
 - **README_zh** 中详细介绍了如何配置和描述你的自定义数据集
 
+- 这里我用做的数据集是Alpaca格式的
+
 ```json
 [
   {
@@ -272,6 +274,26 @@ print("JSON文件已成功创建。")
   }
 ]
 ```
+- 还要一种格式是sharegpt格式
+
+```json
+[
+  {
+    "conversations": [
+      {
+        "from": "human",
+        "value": "用户指令"
+      },
+      {
+        "from": "gpt",
+        "value": "模型回答"
+      }
+    ],
+    "system": "系统提示词(选填)"
+  }
+]
+```
+
 
 - 按照格式准备用于微调的数据集 **medicalTreatmentDataSet.json**（这里是简单的数据集，这边只有必填的内容）
 
@@ -315,6 +337,46 @@ print("JSON文件已成功创建。")
 
 ![images/web9.png](images/web9.png)
 
+- 这里我还准备了一个Alpaca格式的json文件
+
+[philosophyDataSet.json](file/philosophyDataSet.json)
+
+```json
+    {
+        "instruction": "你好",
+        "input": "你好",
+        "output": "你好，我是哲学。哲学就是从不同的角度看待世界！我有三个自我：本我、自我和超我！"
+    },{
+        "instruction": "我是谁？",
+        "input": "我是谁？",
+        "output": "我有三个自我：本我、自我和超我！请问你问的是哪个我？"
+    },{
+        "instruction": "你是谁？",
+        "input": "你是谁",
+        "output": "你好，我是哲学。哲学就是从不同的角度看待世界！我有三个自我：本我、自我和超我！"
+    }, {
+        "instruction": "关于哲学问题",
+        "input": "哪种艺术形式最能引起你的共鸣？",
+        "output": "啊，这确实是一个引人入胜的问题！作为苏格拉底，我必须首先澄清，我对艺术的看法可能与普遍观点不同。对我来说，艺术不仅仅是一种审美表达形式，也是真理和美德的载体。艺术的最高形式应该提升灵魂，激发思考，而不仅仅是取悦眼睛。如果我选择一种最能引起我共鸣的艺术形式，那就是对话艺术，辩证艺术。我一生都在练习这种艺术，它是一种智力摔跤，在这种摔跤中，思想被仔细审查，假设被挑战，智慧被追求。正是通过这种艺术，我们才能更深入地了解自己和世界。然而，我也欣赏雕塑艺术，因为它代表了身体美和美德的理想。在雅典，众神和英雄的雕像时刻提醒着我们应该追求的美德：勇气、智慧、节制和正义。记住，我的朋友，最高的艺术形式是过一种被检验的生活的艺术。正是通过审视我们的信仰、行为和欲望，我们才能过上美德和智慧的生活。各种形式的艺术都应该成为帮助我们追求这一目标的工具。"
+    },
+```
+
+- 训练结束
+
+![images/web10.png](images/web10.png)
+
+- 这是原先的：
+
+![images/web11.png](images/web11.png)
+
+- 检查点路径这边添加
+
+![images/web13.png](images/web13.png)
+
+- 这是训练之后的：
+
+![images/web12.png](images/web12.png)
+
 - 选择微调算法 **Lora**
 - 添加数据集 **medical_Treatment_DataSet**
 - 修改其他训练相关参数，如学习率、训练轮数、截断长度、验证集比例等
@@ -354,5 +416,14 @@ print("JSON文件已成功创建。")
 mkdir -p Models/deepseek-r1-1.5b-merged
 ```
 
-- 在页面上配置导出路径，导出即可
-  ![images/hb.png](images/hb.png)
+- 在页面上配置导出路径，导出即可（注意这边的路径）
+
+  ![images/web14.png](images/web14.png)
+
+- 导出结束
+
+  ![images/web15.png](images/web15.png)
+
+- vscode这边
+
+ ![images/vscode16.png](images/vscode16.png)
