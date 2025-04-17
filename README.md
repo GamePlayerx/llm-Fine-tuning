@@ -427,3 +427,106 @@ mkdir -p Models/deepseek-r1-1.5b-merged
 - vscode这边
 
  ![images/vscode16.png](images/vscode16.png)
+
+
+## 三、部署模型
+
+- 创建环境
+
+ ![images/vscode17.png](images/vscode17.png)
+
+```bash
+conda create -n fastApi python=3.10
+```
+
+- 激活环境
+
+```bash
+conda activate fastApi
+```
+
+- 在该环境中下载部署模型需要的依赖
+
+```bash
+conda install -c conda-forge fastapi uvicorn transformers pytorch
+```
+
+```bash
+pip install safetensors sentencepiece protobuf
+```
+
+##### 2. 通过 FastAPI 部署模型并暴露 HTTP 接口
+
+- 创建 App 文件夹
+
+```bash
+mkdir App
+```
+
+- 创建 main.py 文件，作为启动应用的入口
+
+```bash
+touch main.py
+```
+
+- 修改 main.py 文件并保存
+
+```python
+from fastapi import FastAPI
+from transformers import AutoModelForCausalLM, AutoTokenizer
+import torch
+
+app = FastAPI()
+
+# 模型路径
+model_path = "/root/autodl-tmp/Models/deepseek-r1-1.5b-merged"
+
+# 加载 tokenizer （分词器）
+tokenizer = AutoTokenizer.from_pretrained(model_path)
+
+# 加载模型并移动到可用设备（GPU/CPU）
+device = "cuda" if torch.cuda.is_available() else "cpu"
+model = AutoModelForCausalLM.from_pretrained(model_path).to(device)
+
+@app.get("/generate")
+async def generate_text(prompt: str):
+    # 使用 tokenizer 编码输入的 prompt
+    inputs = tokenizer(prompt, return_tensors="pt").to(device)
+    
+    # 使用模型生成文本
+    outputs = model.generate(inputs["input_ids"], max_length=150)
+    
+    # 解码生成的输出
+    generated_text = tokenizer.decode(outputs[0], skip_special_tokens=True)
+    
+    return {"generated_text": generated_text}
+
+```
+
+- 进入包含 `main.py` 文件的目录，然后运行以下命令来启动 FastAPI 应用
+
+```
+uvicorn main:app --reload --host 0.0.0.0
+```
+
+	- `main` 是 Python 文件名（要注意不包含 `.py` 扩展名）
+	- `app` 是 FastAPI 实例的变量名（代码中 `app = FastAPI()`）
+	- `--reload` 使代码更改后可以自动重载，适用于开发环境
+	- `host 0.0.0.0`：将 FastAPI 应用绑定到所有可用的网络接口，这样我们的本机就可以通过内网穿透访问该服务
+
+- 配置端口转发，使得本机可以访问该服务 [SSH隧道](https://www.autodl.com/docs/ssh_proxy/)
+- 浏览器输入以下 url，测试服务是否启动成功
+
+ ![images/vscode18.png](images/vscode18.png)
+ 
+- 用apipost测试一下 这边就问一个你好
+
+ ![images/apipost1.png](images/apipost1.png)
+ 
+- 结果
+
+ ![images/apipost2.png](images/apipost2.png)
+ 
+- 服务器
+
+ ![images/vscode20.png](images/vscode20.png)
