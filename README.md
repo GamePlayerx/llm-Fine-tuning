@@ -514,6 +514,90 @@ uvicorn main:app --reload --host 0.0.0.0
 	- `--reload` 使代码更改后可以自动重载，适用于开发环境
 	- `host 0.0.0.0`：将 FastAPI 应用绑定到所有可用的网络接口，这样我们的本机就可以通过内网穿透访问该服务
 
+- 这边的端口用的是默认的。如果你想要修改端口的话可以这样改：
+
+```python
+from fastapi import FastAPI
+from transformers import AutoModelForCausalLM, AutoTokenizer
+import torch
+
+app = FastAPI()
+
+# 模型路径
+model_path = "/root/autodl-tmp/Models/deepseek-r1-1.5b-merged"
+
+# 加载 tokenizer （分词器）
+tokenizer = AutoTokenizer.from_pretrained(model_path)
+
+# 加载模型并移动到可用设备（GPU/CPU）
+device = "cuda" if torch.cuda.is_available() else "cpu"
+model = AutoModelForCausalLM.from_pretrained(model_path).to(device)
+
+@app.get("/generate")
+async def generate_text(prompt: str):
+    # 使用 tokenizer 编码输入的 prompt
+    inputs = tokenizer(prompt, return_tensors="pt").to(device)
+    
+    # 使用模型生成文本
+    outputs = model.generate(inputs["input_ids"], max_length=150)
+    
+    # 解码生成的输出
+    generated_text = tokenizer.decode(outputs[0], skip_special_tokens=True)
+    
+    return {"generated_text": generated_text}
+
+if __name__ == "__main__":
+    import uvicorn
+    uvicorn.run(
+        app="main:app",
+        host="0.0.0.0",  # 允许所有IP访问
+        port=8080,       # 自定义端口
+        reload=True      # 开发模式自动重载
+    )
+```
+
+- 启动
+
+```
+python3 main.py
+```
+
+- 当然，你还可以用vllm部署项目
+
+- 先下载vllm
+
+```
+pip install vllm
+```
+
+- 用vllm部署
+
+```
+python3 -m vllm.entrypoints.openai.api_server \
+  --model /path/to/deepseek-r1 \
+  --dtype float16 \
+  --max-model-len 4096
+```
+
+	--model：路径指向你合并后的模型目录。
+    --dtype float16：用于减少显存占用，推荐用于 A100、3090、4090、H100 等。
+    --max-model-len：可选参数，设置最大上下文长度，DeepSeek 默认是 4096。
+
+- 验证服务是否可用
+
+默认服务地址是：http://localhost:8000
+
+```bash
+curl http://localhost:8000/v1/chat/completions \
+  -H "Content-Type: application/json" \
+  -d '{
+    "model": "deepseek-r1",
+    "messages": [{"role": "user", "content": "写一段快速排序的 Python 代码"}],
+    "temperature": 0.7,
+    "max_tokens": 512
+  }'
+```
+
 - 配置端口转发，使得本机可以访问该服务 [SSH隧道](https://www.autodl.com/docs/ssh_proxy/)
 - 浏览器输入以下 url，测试服务是否启动成功
 
