@@ -556,6 +556,88 @@ if __name__ == "__main__":
     )
 ```
 
+- 这是另外一种方式
+
+```python
+from fastapi import FastAPI, Request
+from pydantic import BaseModel
+from transformers import AutoModelForCausalLM, AutoTokenizer, TextIteratorStreamer
+from threading import Thread
+import torch
+import json
+from fastapi.responses import StreamingResponse
+
+app = FastAPI()
+
+# 模型路径
+model_path = "deepseek-r1-1.5b-philosophy"
+
+# 加载 tokenizer 和模型
+tokenizer = AutoTokenizer.from_pretrained(model_path)
+device = "cuda" if torch.cuda.is_available() else "cpu"
+model = AutoModelForCausalLM.from_pretrained(model_path).to(device)
+
+class GenerateRequest(BaseModel):
+    request_id: str
+    phone_number: str
+    query: str
+
+def generate_stream(request_id: str, phone_number: str, query: str):
+    # 创建流式生成器
+    streamer = TextIteratorStreamer(tokenizer, skip_prompt=True)
+    
+    # 准备输入
+    inputs = tokenizer([query], return_tensors="pt", padding=True).to(device)
+    
+    # 在后台线程中启动生成过程
+    generation_kwargs = dict(
+        inputs,
+        streamer=streamer,
+        max_new_tokens=150,
+        pad_token_id=tokenizer.eos_token_id
+    )
+    thread = Thread(target=model.generate, kwargs=generation_kwargs)
+    thread.start()
+
+    # 流式返回生成的文本
+    for new_text in streamer:
+        # 构造符合要求的JSON格式
+        yield json.dumps({
+            "request_id": request_id,
+            "phone_number": phone_number,
+            "response": new_text
+        }) + "\n"
+
+@app.post("/generate")
+async def generate_text(request: GenerateRequest):
+    # 创建流式响应
+    return StreamingResponse(
+        generate_stream(
+            request.request_id,
+            request.phone_number,
+            request.query
+        ),
+        media_type="application/json"
+    )
+
+# 运行命令（如果需要测试的话）
+# uvicorn your_filename:app --reload
+
+if __name__ == "__main__":
+    import uvicorn
+    uvicorn.run(
+        app="new_main:app",
+        host="0.0.0.0",  # 允许所有IP访问
+        port=20203,       # 自定义端口
+        reload=True      # 开发模式自动重载
+    )
+
+# nohup python3 -u new_main.py &
+# 运行命令（如果需要测试的话）
+# uvicorn your_filename:app --reload
+
+```
+
 - 启动
 
 ```
